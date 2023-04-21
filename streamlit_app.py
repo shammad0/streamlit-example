@@ -3,8 +3,7 @@ import altair as alt
 import math
 import pandas as pd
 import streamlit as st
-import streamlit.components.v1 as stc
-import streamlit_canvas as st_canvas
+
 
 """
 # Welcome to Streamlit!
