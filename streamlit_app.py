@@ -1,52 +1,71 @@
-from collections import namedtuple
-import altair as alt
-import math
-import pandas as pd
 import streamlit as st
+import streamlit_canvas as st_canvas
+import json
 
+# Define the nodes of the flowchart
+nodes = {
+    "Start": {"x": 50, "y": 150},
+    "Process 1": {"x": 200, "y": 50},
+    "Process 2": {"x": 200, "y": 250},
+    "End": {"x": 350, "y": 150},
+}
 
-"""
-# Welcome to Streamlit!
+# Define the connections between nodes
+edges = [("Start", "Process 1"), ("Start", "Process 2"), ("Process 1", "End"), ("Process 2", "End")]
 
-Edit `/streamlit_app.py` to customize this app to your heart's desire :heart:
+# Define the colors of the nodes and connections
+node_color = {"Start": "green", "End": "red"}
+edge_color = {"Start->Process 1": "blue", "Start->Process 2": "blue", "Process 1->End": "purple", "Process 2->End": "purple"}
 
-If you have any questions, checkout our [documentation](https://docs.streamlit.io) and [community
-forums](https://discuss.streamlit.io).
+def draw_flowchart():
+    # Draw the nodes
+    for node in nodes:
+        color = node_color.get(node, "white")
+        st_canvas.draw_rectangle(
+            nodes[node]["x"],
+            nodes[node]["y"],
+            nodes[node]["x"] + 100,
+            nodes[node]["y"] + 50,
+            color=color,
+            fill_color=color,
+            stroke_width=2,
+        )
+        st_canvas.write_text(node, nodes[node]["x"] + 10, nodes[node]["y"] + 10)
+    
+    # Draw the connections between nodes
+    for edge in edges:
+        start_node = edge[0]
+        end_node = edge[1]
+        color = edge_color.get(f"{start_node}->{end_node}", "black")
+        st_canvas.draw_line(
+            nodes[start_node]["x"] + 100,
+            nodes[start_node]["y"] + 25,
+            nodes[end_node]["x"],
+            nodes[end_node]["y"] + 25,
+            color=color,
+            width=2,
+        )
 
-In the meantime, below is an example of what you can do with just a few lines of code:
-"""
+def main():
+    st.title("Interactive Flowchart")
+    
+    # Draw the initial flowchart
+    draw_flowchart()
+    
+    # Allow users to modify the flowchart
+    with st_canvas.StCanvas(draw_func=draw_flowchart, height=400, width=500, stroke_width=2, stroke_color="black", background_color="white", key="canvas"):
+        if st_canvas._get_state().dirty:
+            json_data = st_canvas._get_state().to_json()
+            nodes_data = json.loads(json_data)["objects"]["nodes"]
+            edges_data = json.loads(json_data)["objects"]["lines"]
+            for node in nodes_data:
+                nodes[node["text"]]["x"] = node["x"]
+                nodes[node["text"]]["y"] = node["y"]
+            for edge in edges_data:
+                start_node = edge["start_text"]
+                end_node = edge["end_text"]
+                edges.append((start_node, end_node))
+                edge_color[f"{start_node}->{end_node}"] = "black"
 
-
-with st.echo(code_location='below'):
-
-    # Define the dimensions of the canvas
-    canvas_width = 500
-    canvas_height = 500
-
-    # Define the initial coordinates of the first box
-    x1, y1 = 100, 100
-
-    # Define the size of the boxes
-    box_width, box_height = 100, 50
-
-    # Define the canvas
-    canvas_result = st_canvas(
-        fill_color="rgba(255, 165, 0, 0.3)", stroke_width=2, stroke_color="red",
-        background_color="#FFF", height=canvas_height, width=canvas_width,
-        drawing_mode="free", key="canvas")
-
-    # If the user has drawn something on the canvas
-    if canvas_result.image_data is not None:
-
-        # Draw the first box
-        st_canvas.draw_rectangle(canvas_result.image_data, x1, y1, x1 + box_width, y1 + box_height)
-
-        # Draw the arrows and boxes for the subsequent steps based on user input
-        if st.button('Add Step'):
-            x2, y2 = x1, y1 + box_height + 50
-            st_canvas.draw_line(canvas_result.image_data, x1 + box_width/2, y1 + box_height, x2 + box_width/2, y2)
-            st_canvas.draw_rectangle(canvas_result.image_data, x2, y2, x2 + box_width, y2 + box_height)
-            x1, y1 = x2, y2
-
-    # Display the canvas
-    stc.html(canvas_result._get_streamlit_html())
+if __name__ == "__main__":
+    main()
